@@ -15,29 +15,88 @@ scaler = joblib.load("scaler.pkl")
 st.set_page_config(
     page_title="Prediksi Risiko Stroke",
     page_icon="🧠",
-    layout="centered"
+    layout="wide"
 )
 
-st.title("🧠 Prediksi Risiko Stroke")
-st.write("""
-Aplikasi ini digunakan untuk memprediksi risiko stroke berdasarkan data kesehatan pasien.
-Pengguna dapat memilih model **KNN** atau **Decision Tree**, serta melakukan prediksi melalui input manual atau upload file CSV.
-""")
+# =========================
+# CSS Tampilan
+# =========================
+st.markdown("""
+<style>
+.main {
+    background-color: #f6f8fb;
+}
+
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+.hero {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    padding: 32px;
+    border-radius: 20px;
+    color: white;
+    margin-bottom: 25px;
+}
+
+.hero h1 {
+    font-size: 42px;
+    margin-bottom: 10px;
+}
+
+.hero p {
+    font-size: 17px;
+    line-height: 1.6;
+}
+
+.card {
+    background-color: white;
+    padding: 22px;
+    border-radius: 18px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+}
+
+.result-stroke {
+    background-color: #fee2e2;
+    border-left: 8px solid #ef4444;
+    padding: 20px;
+    border-radius: 12px;
+    color: #991b1b;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.result-safe {
+    background-color: #dcfce7;
+    border-left: 8px solid #22c55e;
+    padding: 20px;
+    border-radius: 12px;
+    color: #166534;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.small-text {
+    color: #64748b;
+    font-size: 14px;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # =========================
-# Pilih Model
+# Header
 # =========================
-st.subheader("Pilih Model Machine Learning")
-
-model_pilihan = st.selectbox(
-    "Pilih model yang ingin digunakan:",
-    ["KNN", "Decision Tree"]
-)
-
-if model_pilihan == "KNN":
-    model = knn_model
-else:
-    model = dt_model
+st.markdown("""
+<div class="hero">
+    <h1>🧠 Prediksi Risiko Stroke</h1>
+    <p>
+    Aplikasi machine learning berbasis web untuk memprediksi risiko stroke berdasarkan data kesehatan pasien.
+    Pengguna dapat memilih model KNN atau Decision Tree, serta melakukan prediksi melalui input manual maupun upload file CSV.
+    </p>
+</div>
+""", unsafe_allow_html=True)
 
 # =========================
 # Mapping Encoding
@@ -109,135 +168,182 @@ def preprocess_data(data):
 
     if data.isnull().sum().sum() > 0:
         st.error("Masih terdapat data kosong atau kategori yang tidak sesuai setelah preprocessing.")
-        st.write("Cek data berikut:")
-        st.dataframe(data[data.isnull().any(axis=1)])
         return None
 
     return data
 
 # =========================
-# Pilih Metode Input
+# Sidebar
 # =========================
-st.subheader("Metode Input Data")
-
-metode_input = st.radio(
-    "Pilih metode input:",
-    ["Input Manual", "Upload CSV"]
-)
-
-# =========================
-# Input Manual
-# =========================
-if metode_input == "Input Manual":
-    st.subheader("Input Data Pasien")
-
-    gender = st.selectbox("Gender", ["Female", "Male", "Other"])
-    age = st.number_input("Usia", min_value=0.0, max_value=120.0, value=30.0)
-    hypertension = st.selectbox("Riwayat Hipertensi", ["Tidak", "Ya"])
-    heart_disease = st.selectbox("Riwayat Penyakit Jantung", ["Tidak", "Ya"])
-    ever_married = st.selectbox("Status Pernikahan", ["No", "Yes"])
-    work_type = st.selectbox("Jenis Pekerjaan", ["Private", "Self-employed", "Govt_job", "children", "Never_worked"])
-    residence_type = st.selectbox("Tipe Tempat Tinggal", ["Urban", "Rural"])
-    avg_glucose_level = st.number_input("Rata-rata Kadar Glukosa", min_value=0.0, value=100.0)
-    bmi = st.number_input("BMI", min_value=0.0, value=25.0)
-    smoking_status = st.selectbox("Status Merokok", ["formerly smoked", "never smoked", "smokes", "Unknown"])
-
-    if st.button("Prediksi Stroke"):
-        input_data = pd.DataFrame([[
-            gender_map[gender],
-            age,
-            yes_no_map[hypertension],
-            yes_no_map[heart_disease],
-            married_map[ever_married],
-            work_map[work_type],
-            residence_map[residence_type],
-            avg_glucose_level,
-            bmi,
-            smoking_map[smoking_status]
-        ]], columns=kolom_fitur)
-
-        input_scaled = scaler.transform(input_data)
-        prediksi = model.predict(input_scaled)
-
-        if prediksi[0] == 1:
-            st.error("Hasil Prediksi: Pasien Berisiko Stroke")
-        else:
-            st.success("Hasil Prediksi: Pasien Tidak Stroke")
-
-# =========================
-# Upload CSV
-# =========================
-else:
-    st.subheader("Upload File CSV")
-
-    uploaded_file = st.file_uploader(
-        "Upload file CSV dengan kolom yang sesuai dataset stroke",
-        type=["csv"]
+with st.sidebar:
+    st.title("⚙️ Pengaturan")
+    
+    model_pilihan = st.selectbox(
+        "Pilih Model Machine Learning",
+        ["KNN", "Decision Tree"]
     )
 
-    st.info("""
-    File CSV harus memiliki kolom:
-    gender, age, hypertension, heart_disease, ever_married, work_type,
-    Residence_type, avg_glucose_level, bmi, smoking_status.
+    metode_input = st.radio(
+        "Metode Input Data",
+        ["Input Manual", "Upload CSV"]
+    )
 
-    Kolom id dan stroke boleh ada, tetapi tidak akan ditampilkan pada hasil akhir.
-    """)
-
-    if uploaded_file is not None:
-        data_csv = pd.read_csv(uploaded_file)
-
-        st.write("Data yang diupload:")
-        st.dataframe(data_csv)
-
-        if st.button("Prediksi Data CSV"):
-            data_prediksi = preprocess_data(data_csv)
-
-            if data_prediksi is not None:
-                data_scaled = scaler.transform(data_prediksi)
-                hasil_prediksi = model.predict(data_scaled)
-
-                hasil = data_csv.copy()
-
-                hasil["hasil_prediksi"] = pd.Series(hasil_prediksi).map({
-                    0: "Tidak Stroke",
-                    1: "Berisiko Stroke"
-                })
-
-                if "stroke" in hasil.columns:
-                    hasil = hasil.drop("stroke", axis=1)
-
-                if "prediksi" in hasil.columns:
-                    hasil = hasil.drop("prediksi", axis=1)
-
-                st.success("Prediksi berhasil dilakukan.")
-                st.dataframe(hasil)
-
-                csv_download = hasil.to_csv(index=False).encode("utf-8")
-
-                st.download_button(
-                    label="Download Hasil Prediksi",
-                    data=csv_download,
-                    file_name="hasil_prediksi_stroke.csv",
-                    mime="text/csv"
-                )
-
-# =========================
-# Informasi Model
-# =========================
-st.markdown("---")
-st.subheader("Informasi Model")
+    st.markdown("---")
+    st.write("📌 **Keterangan Label**")
+    st.write("0 = Tidak Stroke")
+    st.write("1 = Berisiko Stroke")
 
 if model_pilihan == "KNN":
-    st.write("Algoritma: K-Nearest Neighbor (KNN)")
-    st.write("Jumlah Tetangga (K):", model.n_neighbors)
-    st.write("Metode Jarak:", model.metric)
-    st.write("Weights:", model.weights)
+    model = knn_model
 else:
-    st.write("Algoritma: Decision Tree")
-    st.write("Criterion:", model.criterion)
-    st.write("Max Depth:", model.max_depth)
-    st.write("Min Samples Split:", model.min_samples_split)
-    st.write("Min Samples Leaf:", model.min_samples_leaf)
+    model = dt_model
 
-with st.expander("Lihat Detail Model"):
-    st.code(str(model))
+# =========================
+# Konten Utama
+# =========================
+left, right = st.columns([2, 1])
+
+with left:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("📥 Input Data")
+    
+    # =========================
+    # Input Manual
+    # =========================
+    if metode_input == "Input Manual":
+        st.write("Masukkan data kesehatan pasien pada form berikut.")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            gender = st.selectbox("Gender", ["Female", "Male", "Other"])
+            age = st.number_input("Usia", min_value=0.0, max_value=120.0, value=30.0)
+            hypertension = st.selectbox("Riwayat Hipertensi", ["Tidak", "Ya"])
+            heart_disease = st.selectbox("Riwayat Penyakit Jantung", ["Tidak", "Ya"])
+            ever_married = st.selectbox("Status Pernikahan", ["No", "Yes"])
+
+        with col2:
+            work_type = st.selectbox("Jenis Pekerjaan", ["Private", "Self-employed", "Govt_job", "children", "Never_worked"])
+            residence_type = st.selectbox("Tipe Tempat Tinggal", ["Urban", "Rural"])
+            avg_glucose_level = st.number_input("Rata-rata Kadar Glukosa", min_value=0.0, value=100.0)
+            bmi = st.number_input("BMI", min_value=0.0, value=25.0)
+            smoking_status = st.selectbox("Status Merokok", ["formerly smoked", "never smoked", "smokes", "Unknown"])
+
+        if st.button("🔍 Prediksi Stroke", use_container_width=True):
+            input_data = pd.DataFrame([[
+                gender_map[gender],
+                age,
+                yes_no_map[hypertension],
+                yes_no_map[heart_disease],
+                married_map[ever_married],
+                work_map[work_type],
+                residence_map[residence_type],
+                avg_glucose_level,
+                bmi,
+                smoking_map[smoking_status]
+            ]], columns=kolom_fitur)
+
+            input_scaled = scaler.transform(input_data)
+            prediksi = model.predict(input_scaled)
+
+            st.markdown("---")
+
+            if prediksi[0] == 1:
+                st.markdown(
+                    '<div class="result-stroke">⚠️ Hasil Prediksi: Pasien Berisiko Stroke</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    '<div class="result-safe">✅ Hasil Prediksi: Pasien Tidak Stroke</div>',
+                    unsafe_allow_html=True
+                )
+
+    # =========================
+    # Upload CSV
+    # =========================
+    else:
+        st.write("Upload file CSV untuk melakukan prediksi banyak data sekaligus.")
+
+        uploaded_file = st.file_uploader(
+            "Upload file CSV",
+            type=["csv"]
+        )
+
+        st.info("""
+        File CSV harus memiliki kolom:
+        gender, age, hypertension, heart_disease, ever_married, work_type,
+        Residence_type, avg_glucose_level, bmi, smoking_status.
+
+        Kolom id dan stroke boleh ada, tetapi tidak akan ditampilkan pada hasil akhir.
+        """)
+
+        if uploaded_file is not None:
+            data_csv = pd.read_csv(uploaded_file)
+
+            st.write("📄 Data yang diupload:")
+            st.dataframe(data_csv, use_container_width=True)
+
+            if st.button("🔍 Prediksi Data CSV", use_container_width=True):
+                data_prediksi = preprocess_data(data_csv)
+
+                if data_prediksi is not None:
+                    data_scaled = scaler.transform(data_prediksi)
+                    hasil_prediksi = model.predict(data_scaled)
+
+                    hasil = data_csv.copy()
+
+                    hasil["hasil_prediksi"] = pd.Series(hasil_prediksi).map({
+                        0: "Tidak Stroke",
+                        1: "Berisiko Stroke"
+                    })
+
+                    if "stroke" in hasil.columns:
+                        hasil = hasil.drop("stroke", axis=1)
+
+                    if "prediksi" in hasil.columns:
+                        hasil = hasil.drop("prediksi", axis=1)
+
+                    st.success("Prediksi berhasil dilakukan.")
+                    st.dataframe(hasil, use_container_width=True)
+
+                    csv_download = hasil.to_csv(index=False).encode("utf-8")
+
+                    st.download_button(
+                        label="⬇️ Download Hasil Prediksi",
+                        data=csv_download,
+                        file_name="hasil_prediksi_stroke.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with right:
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("🤖 Informasi Model")
+
+    if model_pilihan == "KNN":
+        st.write("**Algoritma:** K-Nearest Neighbor")
+        st.write("**Jumlah Tetangga (K):**", model.n_neighbors)
+        st.write("**Metode Jarak:**", model.metric)
+        st.write("**Weights:**", model.weights)
+    else:
+        st.write("**Algoritma:** Decision Tree")
+        st.write("**Criterion:**", model.criterion)
+        st.write("**Max Depth:**", model.max_depth)
+        st.write("**Min Samples Split:**", model.min_samples_split)
+        st.write("**Min Samples Leaf:**", model.min_samples_leaf)
+
+    with st.expander("Lihat Detail Model"):
+        st.code(str(model))
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("📊 Fitur Dataset")
+    st.write("""
+    Dataset menggunakan fitur kesehatan pasien seperti usia, hipertensi,
+    penyakit jantung, kadar glukosa, BMI, status merokok, dan faktor demografis.
+    """)
+    st.markdown('</div>', unsafe_allow_html=True)
